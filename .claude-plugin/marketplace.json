@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "amsonntagchow-ratemyskill",
+  "description": "RateMySkill for Claude Code.",
+  "owner": {
+    "name": "AmsonntagChow"
+  },
+  "plugins": [
+    {
+      "name": "ratemyskill",
+      "displayName": "RateMySkill",
+      "source": ".",
+      "version": "1.0.0",
+      "description": "Audits Agent Skills for trigger precision, behavioral uplift, safety, package integrity, and marketplace readiness with evidence-backed release verdicts.",
+      "author": {
+        "name": "AmsonntagChow"
+      },
+      "homepage": "https://github.com/AmsonntagChow/ratemyskill#installation",
+      "repository": "https://github.com/AmsonntagChow/ratemyskill",
+      "license": "MIT",
+      "category": "development",
+      "tags": [
+        "agent-skills",
+        "skill-audit",
+        "trigger-testing",
+        "safety",
+        "release-gate"
+      ]
+    }
+  ]
+}

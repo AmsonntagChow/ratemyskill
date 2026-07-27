@@ -1,0 +1,4 @@
+interface:
+  display_name: "Old Receipt Checker"
+  short_description: "Checks receipts using the old workflow"
+  default_prompt: "Use $receipt-checker to review this receipt."

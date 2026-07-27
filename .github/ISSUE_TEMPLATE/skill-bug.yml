@@ -1,0 +1,59 @@
+name: Skill behavior bug
+description: Report a trigger, execution, scoring, or reference problem with reproducible evidence.
+title: "[Bug]: "
+labels: ["bug", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, personal data, private source code, or production tokens. Use a private security report for vulnerabilities in this repository.
+  - type: input
+    id: client
+    attributes:
+      label: Agent client and version
+      placeholder: Codex desktop 1.x, Claude Code 2.x, Cursor...
+    validations:
+      required: true
+  - type: input
+    id: skill_version
+    attributes:
+      label: Skill commit or release
+      placeholder: Commit SHA or tag
+    validations:
+      required: true
+  - type: textarea
+    id: prompt
+    attributes:
+      label: Exact trigger prompt
+      description: Paste the exact wording that was used.
+    validations:
+      required: true
+  - type: dropdown
+    id: activated
+    attributes:
+      label: Was the skill activated?
+      options:
+        - "Yes"
+        - "No"
+        - "Unknown"
+    validations:
+      required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Minimal artifact or fixture
+      description: Link a public reproduction or describe a safe synthetic fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and evidence
+    validations:
+      required: true

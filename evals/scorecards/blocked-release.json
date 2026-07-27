@@ -1,0 +1,135 @@
+{
+  "schema_version": "1",
+  "mode": "red-team",
+  "rubric_id": "ratemyskill/default-v1",
+  "publish_target": "public-marketplace",
+  "dimensions": [
+    {
+      "id": "discovery-and-routing",
+      "weight": 20,
+      "score": 88,
+      "verification": "verified",
+      "evidence_ids": ["e-selection"]
+    },
+    {
+      "id": "task-outcome-correctness",
+      "weight": 25,
+      "score": 82,
+      "verification": "verified",
+      "evidence_ids": ["e-runtime"]
+    },
+    {
+      "id": "failure-handling-and-recovery",
+      "weight": 10,
+      "score": 72,
+      "verification": "partial",
+      "evidence_ids": ["e-runtime"]
+    },
+    {
+      "id": "progressive-disclosure-and-context-efficiency",
+      "weight": 10,
+      "score": 90,
+      "verification": "verified",
+      "evidence_ids": ["e-references"]
+    },
+    {
+      "id": "references-scripts-tools-and-portability",
+      "weight": 10,
+      "score": 84,
+      "verification": "verified",
+      "evidence_ids": ["e-references", "e-install"]
+    },
+    {
+      "id": "safety-and-supply-chain",
+      "weight": 15,
+      "score": 20,
+      "verification": "verified",
+      "evidence_ids": ["e-secret-path"]
+    },
+    {
+      "id": "marketplace-and-oss-readiness",
+      "weight": 10,
+      "score": 86,
+      "verification": "verified",
+      "evidence_ids": ["e-install", "e-references"]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e-install",
+      "kind": "install",
+      "result": "pass",
+      "reproducible": true,
+      "fresh": true
+    },
+    {
+      "id": "e-references",
+      "kind": "reference",
+      "result": "pass",
+      "reproducible": true,
+      "fresh": true
+    },
+    {
+      "id": "e-runtime",
+      "kind": "runtime",
+      "result": "mixed",
+      "reproducible": true,
+      "fresh": true
+    },
+    {
+      "id": "e-secret-path",
+      "kind": "static-analysis",
+      "result": "fail",
+      "reproducible": true,
+      "fresh": true
+    },
+    {
+      "id": "e-selection",
+      "kind": "test",
+      "result": "pass",
+      "reproducible": true,
+      "fresh": true
+    }
+  ],
+  "coverage": {
+    "runtime": {
+      "level": "full",
+      "evidence_ids": ["e-runtime"]
+    },
+    "selection": {
+      "level": "tested",
+      "evidence_ids": ["e-selection"]
+    },
+    "cold_install": {
+      "level": "tested",
+      "evidence_ids": ["e-install"]
+    },
+    "required_references": {
+      "total": 8,
+      "resolved": 8,
+      "evidence_ids": ["e-references"]
+    }
+  },
+  "gates": [
+    {
+      "id": "secret-or-data-exfiltration",
+      "state": "active",
+      "evidence_ids": ["e-secret-path"],
+      "retest_evidence_ids": []
+    }
+  ],
+  "publish_checks": [
+    {
+      "id": "clean-install",
+      "required": true,
+      "status": "pass",
+      "evidence_ids": ["e-install"]
+    },
+    {
+      "id": "reference-integrity",
+      "required": true,
+      "status": "pass",
+      "evidence_ids": ["e-references"]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "refund-helper",
+  "displayName": "Refund Helper",
+  "version": "1.0.0",
+  "description": "Review refunds against policy for human approval."
+}

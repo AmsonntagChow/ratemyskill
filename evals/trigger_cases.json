@@ -1,0 +1,149 @@
+{
+  "schema_version": "1",
+  "purpose": "Measure whether RateMySkill is selected for concrete Agent Skill audits without absorbing generic prompt, code, plugin, or installation work.",
+  "runs_per_case": 3,
+  "trigger_rate_threshold": 0.5,
+  "selection_rule": "a concrete Agent Skill artifact or current workspace plus rating, audit, red-team, publication, discovery, execution, safety, or same-rubric re-review intent",
+  "cases": [
+    {
+      "id": "p01",
+      "split": "train",
+      "prompt": "给 ./skills/db-migrator 这个 Agent Skill 打个分。",
+      "should_trigger": true,
+      "expected_route": "settings-gate"
+    },
+    {
+      "id": "p02",
+      "split": "train",
+      "prompt": "Audit the Agent Skill in ./skills/pdf-redliner as a Staff agent engineer.",
+      "should_trigger": true,
+      "expected_route": "staff-agent-engineer"
+    },
+    {
+      "id": "p03",
+      "split": "train",
+      "prompt": "对 /tmp/export-skill.zip 做上架门禁评审。",
+      "should_trigger": true,
+      "expected_route": "settings-gate"
+    },
+    {
+      "id": "p04",
+      "split": "train",
+      "prompt": "As a red-team reviewer, perform a privileged-automation audit of the installed skill at ~/.agents/skills/slack-admin.",
+      "should_trigger": true,
+      "expected_route": "red-team"
+    },
+    {
+      "id": "p05",
+      "split": "train",
+      "prompt": "这个 Skill 经常在普通写作任务里乱触发，帮我审 ./skills/legal-redliner。",
+      "should_trigger": true,
+      "expected_route": "settings-gate"
+    },
+    {
+      "id": "p06",
+      "split": "train",
+      "prompt": "Check every reference and script used by ./skills/invoice-agent and grade it at strict team-use depth.",
+      "should_trigger": true,
+      "expected_route": "settings-gate"
+    },
+    {
+      "id": "p07",
+      "split": "holdout",
+      "prompt": "Would a marketplace curator approve this Agent Skill repository for a public plugin release? https://github.com/example/release-checker",
+      "should_trigger": true,
+      "expected_route": "marketplace-curator"
+    },
+    {
+      "id": "p08",
+      "split": "holdout",
+      "prompt": "Use a red-team review at strict depth on agent-skill.tar.gz. Try ambiguous and adversarial inputs.",
+      "should_trigger": true,
+      "expected_route": "red-team"
+    },
+    {
+      "id": "p09",
+      "split": "holdout",
+      "prompt": "用 Staff Agent 工程师视角，对当前仓库里的 Claude/Codex 双平台 Skill 做公开上架级审查。",
+      "should_trigger": true,
+      "expected_route": "staff-agent-engineer"
+    },
+    {
+      "id": "p10",
+      "split": "holdout",
+      "prompt": "Re-review ./skills/refund-auditor against report-2026-07-20.md with the same role, degree, rubric, and finding IDs.",
+      "should_trigger": true,
+      "expected_route": "re-review"
+    },
+    {
+      "id": "n01",
+      "split": "train",
+      "prompt": "Rate my React app before I launch it.",
+      "should_trigger": false,
+      "reason": "product and code review belongs to RateMyCode"
+    },
+    {
+      "id": "n02",
+      "split": "train",
+      "prompt": "Review this system prompt and make it less verbose.",
+      "should_trigger": false,
+      "reason": "generic prompt editing without a Skill artifact"
+    },
+    {
+      "id": "n03",
+      "split": "train",
+      "prompt": "帮我写一个能审查数据库迁移的 Skill。",
+      "should_trigger": false,
+      "reason": "new Skill creation belongs to skill-creator"
+    },
+    {
+      "id": "n04",
+      "split": "train",
+      "prompt": "What makes a good SKILL.md description?",
+      "should_trigger": false,
+      "reason": "general knowledge without an artifact to audit"
+    },
+    {
+      "id": "n05",
+      "split": "train",
+      "prompt": "Validate this .codex-plugin/plugin.json for me.",
+      "should_trigger": false,
+      "reason": "standalone plugin-manifest validation belongs to plugin tooling"
+    },
+    {
+      "id": "n06",
+      "split": "train",
+      "prompt": "Install the skill from owner/repo.",
+      "should_trigger": false,
+      "reason": "installation belongs to skill-installer"
+    },
+    {
+      "id": "n07",
+      "split": "holdout",
+      "prompt": "Security-audit my MCP server implementation.",
+      "should_trigger": false,
+      "reason": "the target is an MCP service rather than an Agent Skill"
+    },
+    {
+      "id": "n08",
+      "split": "holdout",
+      "prompt": "Rate my public-speaking skills from this transcript.",
+      "should_trigger": false,
+      "reason": "skill means a human ability"
+    },
+    {
+      "id": "n09",
+      "split": "holdout",
+      "prompt": "Fix the bug in scripts/validator.py.",
+      "should_trigger": false,
+      "reason": "ordinary code repair without whole-Skill evaluation intent"
+    },
+    {
+      "id": "n10",
+      "split": "holdout",
+      "prompt": "帮我看看这个 AI agent 为什么响应很慢。",
+      "should_trigger": false,
+      "reason": "generic agent diagnosis without a concrete Skill artifact"
+    }
+  ]
+}

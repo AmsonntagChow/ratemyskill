@@ -1,0 +1,6 @@
+{
+  "name": "refund-helper",
+  "version": "0.8.0",
+  "description": "Old packaged refund helper",
+  "skills": "./skills/"
+}

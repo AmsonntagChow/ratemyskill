@@ -1,0 +1,45 @@
+{
+  "name": "ratemyskill",
+  "version": "1.0.0",
+  "description": "Audits Agent Skills for trigger precision, behavioral uplift, safety, package integrity, and marketplace readiness with evidence-backed release verdicts.",
+  "author": {
+    "name": "AmsonntagChow",
+    "url": "https://github.com/AmsonntagChow"
+  },
+  "homepage": "https://github.com/AmsonntagChow/ratemyskill#installation",
+  "repository": "https://github.com/AmsonntagChow/ratemyskill",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "skill-audit",
+    "skill-evaluation",
+    "trigger-testing",
+    "prompt-injection",
+    "marketplace-readiness",
+    "release-gate"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "RateMySkill",
+    "shortDescription": "Audit skills before release",
+    "longDescription": "RateMySkill audits a real Agent Skill, not just its Markdown. Choose a skill user, Staff agent engineer, red-team reviewer, marketplace curator, or oral-defense professor, then choose the review depth. The plugin tests discovery separately from execution, checks whether the Skill improves outcomes over a no-Skill baseline, blocks unsafe releases, and returns reproducible findings, the three fastest fixes, and a same-rubric retest plan.",
+    "developerName": "AmsonntagChow",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Analyze",
+      "Test"
+    ],
+    "websiteURL": "https://github.com/AmsonntagChow/ratemyskill",
+    "privacyPolicyURL": "https://github.com/AmsonntagChow/ratemyskill/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/AmsonntagChow/ratemyskill/blob/main/TERMS.md",
+    "defaultPrompt": [
+      "As a Staff agent engineer, audit this Skill for public release and give me the three fastest fixes.",
+      "Red-team this Agent Skill at privileged depth. Find unsafe authority, data, network, and dependency behavior.",
+      "As a marketplace curator, verify this Skill package, cold-install evidence, and public claims."
+    ],
+    "brandColor": "#8B5CF6",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png"
+  }
+}
