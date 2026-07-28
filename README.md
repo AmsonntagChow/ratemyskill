@@ -2,14 +2,14 @@
 
 Evidence-backed release review for Agent Skills.
 
+给 Agent Skill 做基于证据的上线体检。
+
 > Your Skill passed YAML validation. Now prove it deserves to be installed.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-2f855a.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-compatible-5b5bd6.svg)](https://agentskills.io/)
 
 RateMySkill audits a concrete Agent Skill as behavior, not just Markdown. It checks whether the right requests discover it, whether using it measurably improves results over the same task without it, whether its scripts and instructions stay inside their authority, and whether the final package can be installed and reproduced by someone else.
-
-中文一句话：我做了一个给 Agent Skill 做上线体检的 Skill。
 
 ## Installation
 
