@@ -1,6 +1,6 @@
 # OpenAI Plugins Directory submission
 
-Use this sheet with the [OpenAI plugin submission portal](https://platform.openai.com/plugins). Choose **Skills only** and upload `dist/ratemyskill-plugin-1.0.0.zip`.
+Use this sheet with the [OpenAI plugin submission portal](https://platform.openai.com/plugins). Choose **Skills only** and upload `dist/ratemyskill-plugin-1.0.1.zip`.
 
 The public directory is universal: one approved listing can appear in ChatGPT and Codex. Public availability begins only after OpenAI review and the publisher's separate **Publish** action.
 
@@ -32,7 +32,7 @@ Enter the five positive and three negative cases from `submission/plugin-test-ca
 
 ## Release notes
 
-Initial 1.0.0 skills-only release. RateMySkill adds configurable skill-user, Staff-agent-engineer, red-team, marketplace-curator, and oral-defense reviews; separate discovery and execution evaluation; evidence ceilings; fixed release vetoes; prioritized fixes; and same-rubric retesting. It has no MCP server, app, hosted backend, authentication, telemetry, or third-party runtime dependency.
+Version 1.0.1 update. Adds a severity-sorted one-line issue list, four non-substitutable evidence lanes, recorded behavioral-eval provenance, target-scoped vetoes, and regression cases for over-constrained instructions and example anchoring. The optional scorecard format moves from v1 to fail-closed schema v2: migrate by adding `lane` and `assertion_type` to evidence plus the new `evidence_panel` and `behavioral_eval` objects; v1 inputs are rejected rather than guessed.
 
 ## Package contents
 

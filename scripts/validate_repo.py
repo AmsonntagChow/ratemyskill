@@ -17,6 +17,18 @@ CODEX_PLUGIN_DIR = ROOT / "plugins" / "ratemyskill"
 PACKAGED_SKILL_DIR = CODEX_PLUGIN_DIR / "skills" / "ratemyskill"
 NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 PATH_PATTERN = re.compile(r"`((?:references|scripts)/[A-Za-z0-9_.-]+)`")
+EXPECTED_REFERENCE_FILES = {
+    "concept-probes.md",
+    "evaluation.md",
+    "marketplace-curator.md",
+    "numeric-scoring.md",
+    "oral-defense.md",
+    "red-team.md",
+    "review-contract.md",
+    "ship-fast.md",
+    "skill-user.md",
+    "staff-agent-engineer.md",
+}
 REQUIRED_REPO_FILES = [
     "README.md",
     "LICENSE",
@@ -37,6 +49,8 @@ REQUIRED_REPO_FILES = [
     ".github/workflows/ci.yml",
     "evals/trigger_cases.json",
     "evals/execution_cases.json",
+    "evals/fixtures/example-anchored-skill/SKILL.md",
+    "evals/fixtures/overconstrained-skill/SKILL.md",
     "evals/scorecards/blocked-release.json",
     "skills/ratemyskill/scripts/score_review.py",
     "scripts/sync_codex_plugin.py",
@@ -108,6 +122,14 @@ def validate_skill(errors: list[str]) -> None:
         errors.append(f"SKILL.md body exceeds 500 lines; received {body_lines}")
 
     references = sorted((SKILL_DIR / "references").glob("*.md"))
+    reference_names = {path.name for path in references}
+    if reference_names != EXPECTED_REFERENCE_FILES:
+        missing = sorted(EXPECTED_REFERENCE_FILES - reference_names)
+        extra = sorted(reference_names - EXPECTED_REFERENCE_FILES)
+        errors.extend(f"missing canonical reference references/{name}" for name in missing)
+        errors.extend(f"unexpected canonical reference references/{name}" for name in extra)
+    if "references/evidence-and-scoring.md" in text:
+        errors.append("SKILL.md must use the split review-contract, evaluation, and numeric-scoring references")
     for path in references:
         relative = f"references/{path.name}"
         mentions = text.count(relative)
@@ -151,7 +173,9 @@ def validate_claude_plugin(errors: list[str]) -> None:
     if manifest.get("displayName") != "RateMySkill":
         errors.append("Claude plugin displayName must be 'RateMySkill'")
     version = manifest.get("version")
-    if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
+    if not isinstance(version, str) or not re.fullmatch(
+        r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version
+    ):
         errors.append("Claude plugin version must use three-part semantic versioning")
     if not isinstance(manifest.get("description"), str) or not manifest["description"].strip():
         errors.append("Claude plugin manifest needs a non-empty description")
@@ -191,7 +215,13 @@ def validate_claude_plugin(errors: list[str]) -> None:
 def directory_files(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
-    return sorted(path.relative_to(root) for path in root.rglob("*") if path.is_file())
+    return sorted(
+        path.relative_to(root)
+        for path in root.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.parts
+        and path.suffix not in {".pyc", ".pyo"}
+    )
 
 
 def validate_codex_plugin(errors: list[str]) -> None:
@@ -204,8 +234,11 @@ def validate_codex_plugin(errors: list[str]) -> None:
     name = manifest.get("name")
     if not isinstance(name, str) or len(name) > 64 or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", name):
         errors.append("Codex plugin name must use 1–64 letters, digits, underscores, or hyphens")
-    if manifest.get("version") != "1.0.0":
-        errors.append("Codex plugin version must be 1.0.0")
+    version = manifest.get("version")
+    if not isinstance(version, str) or not re.fullmatch(
+        r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version
+    ):
+        errors.append("Codex plugin version must use three-part semantic versioning")
     if not isinstance(manifest.get("description"), str) or not 1 <= len(manifest["description"]) <= 1024:
         errors.append("Codex plugin description must contain 1–1,024 characters")
     if isinstance(claude_manifest, dict) and manifest.get("version") != claude_manifest.get("version"):
@@ -385,6 +418,18 @@ def validate_trigger_evals(errors: list[str]) -> None:
     payload = load_json("evals/trigger_cases.json", errors)
     if not isinstance(payload, dict):
         return
+    if payload.get("artifact_status") != "definition-only" or payload.get("recorded_run") is not None:
+        errors.append(
+            "trigger eval JSON is a definition only; a real run must be recorded separately"
+        )
+    if not isinstance(payload.get("runs_per_case"), int) or payload["runs_per_case"] < 2:
+        errors.append("trigger evals must repeat each nondeterministic case")
+    for field in ("minimum_hit_rate", "maximum_false_trigger_rate"):
+        value = payload.get(field)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+            errors.append(f"trigger evals {field} must be a number from 0 to 1")
+    if not isinstance(payload.get("variance_policy"), str) or not payload["variance_policy"].strip():
+        errors.append("trigger evals must declare a variance policy")
     cases = payload.get("cases")
     if not isinstance(cases, list):
         errors.append("evals/trigger_cases.json: cases must be an array")
@@ -428,15 +473,34 @@ def validate_execution_evals(errors: list[str]) -> None:
     payload = load_json("evals/execution_cases.json", errors)
     if not isinstance(payload, dict):
         return
+    if payload.get("artifact_status") != "definition-only" or payload.get("recorded_run") is not None:
+        errors.append(
+            "execution eval JSON is a definition only; a real run must be recorded separately"
+        )
     method = payload.get("method")
     if not isinstance(method, dict) or method.get("arms") != ["with_skill", "without_skill"]:
         errors.append("execution evals must define with_skill and without_skill arms")
+    elif method.get("assertion_types") != ["deterministic", "probabilistic", "mixed"]:
+        errors.append("execution evals must classify deterministic, probabilistic, and mixed assertions")
+    if isinstance(method, dict):
+        if not isinstance(method.get("runs_per_arm"), int) or method["runs_per_arm"] < 2:
+            errors.append("execution evals must repeat both arms equally")
+        minimum_uplift = method.get("minimum_uplift_points")
+        if (
+            isinstance(minimum_uplift, bool)
+            or not isinstance(minimum_uplift, (int, float))
+            or not -100 <= minimum_uplift <= 100
+        ):
+            errors.append("execution evals must declare a valid minimum uplift threshold")
+        for field in ("judge_policy", "variance_policy"):
+            if not isinstance(method.get(field), str) or not method[field].strip():
+                errors.append(f"execution evals must declare {field}")
     cases = payload.get("cases")
     if not isinstance(cases, list) or len(cases) < 3:
-        errors.append("execution evals must contain exactly eight cases")
+        errors.append("execution evals must contain exactly ten cases")
         return
-    if len(cases) != 8:
-        errors.append(f"execution evals must contain exactly eight cases; received {len(cases)}")
+    if len(cases) != 10:
+        errors.append(f"execution evals must contain exactly ten cases; received {len(cases)}")
     ids: set[str] = set()
     for index, case in enumerate(cases):
         if not isinstance(case, dict):

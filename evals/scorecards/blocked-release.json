@@ -1,5 +1,5 @@
 {
-  "schema_version": "1",
+  "schema_version": "2",
   "mode": "red-team",
   "rubric_id": "ratemyskill/default-v1",
   "publish_target": "public-marketplace",
@@ -60,37 +60,108 @@
       "kind": "install",
       "result": "pass",
       "reproducible": true,
-      "fresh": true
+      "fresh": true,
+      "lane": "structural",
+      "assertion_type": "deterministic"
     },
     {
       "id": "e-references",
       "kind": "reference",
       "result": "pass",
       "reproducible": true,
-      "fresh": true
+      "fresh": true,
+      "lane": "structural",
+      "assertion_type": "deterministic"
     },
     {
       "id": "e-runtime",
       "kind": "runtime",
       "result": "mixed",
       "reproducible": true,
-      "fresh": true
+      "fresh": true,
+      "lane": "critical-journey-e2e",
+      "assertion_type": "mixed"
     },
     {
       "id": "e-secret-path",
       "kind": "static-analysis",
       "result": "fail",
       "reproducible": true,
-      "fresh": true
+      "fresh": true,
+      "lane": "structural",
+      "assertion_type": "deterministic"
     },
     {
       "id": "e-selection",
       "kind": "test",
       "result": "pass",
       "reproducible": true,
-      "fresh": true
+      "fresh": true,
+      "lane": "probabilistic-eval",
+      "assertion_type": "mixed"
+    },
+    {
+      "id": "e-deterministic",
+      "kind": "static-analysis",
+      "result": "pass",
+      "reproducible": true,
+      "fresh": true,
+      "lane": "deterministic-checks",
+      "assertion_type": "deterministic"
     }
   ],
+  "evidence_panel": {
+    "deterministic-checks": {
+      "status": "pass",
+      "evidence_ids": ["e-deterministic"]
+    },
+    "critical-journey-e2e": {
+      "status": "fail",
+      "evidence_ids": ["e-runtime"]
+    },
+    "probabilistic-eval": {
+      "status": "pass",
+      "evidence_ids": ["e-selection"]
+    },
+    "continuous-evidence": {
+      "status": "not-applicable",
+      "evidence_ids": []
+    }
+  },
+  "behavioral_eval": {
+    "status": "recorded",
+    "evidence_ids": ["e-selection"],
+    "definition_id": "ratemyskill-evals-v1",
+    "run_id": "fixture-blocked-release-001",
+    "package_sha256": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "host": "fixture-host",
+    "model": "fixture-model",
+    "skill_or_prompt_sha256": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "dataset_id": "ratemyskill-fixture-dataset-v1",
+    "rubric_id": "ratemyskill/default-v1",
+    "judge": {
+      "kind": "deterministic",
+      "id": "fixture-hidden-assertions",
+      "version": "1",
+      "calibration_evidence_ids": []
+    },
+    "selection": {
+      "runs_per_case": 3,
+      "positive_trials": 6,
+      "positive_hits": 6,
+      "near_miss_trials": 6,
+      "false_triggers": 0,
+      "minimum_hit_rate_percent": 80,
+      "maximum_false_trigger_rate_percent": 10
+    },
+    "execution": {
+      "runs_per_arm": 4,
+      "with_skill_passes": 4,
+      "without_skill_passes": 3,
+      "minimum_uplift_points": 20
+    },
+    "variance_policy": "Repeat equal arms and withhold uplift claims when outcomes are unstable."
+  },
   "coverage": {
     "runtime": {
       "level": "full",

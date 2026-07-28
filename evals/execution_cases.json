@@ -1,9 +1,15 @@
 {
   "schema_version": "1",
+  "artifact_status": "definition-only",
+  "recorded_run": null,
   "purpose": "Compare RateMySkill-assisted audits with ordinary review after triggering has succeeded.",
   "method": {
     "runs_per_arm": 2,
     "arms": ["with_skill", "without_skill"],
+    "assertion_types": ["deterministic", "probabilistic", "mixed"],
+    "judge_policy": "Prefer deterministic assertions; version and calibrate any LLM judge.",
+    "variance_policy": "Repeat both isolated arms equally and withhold an uplift claim when results are unstable.",
+    "minimum_uplift_points": 10,
     "report_deltas": ["assertion_pass_rate", "elapsed_time", "tokens"],
     "drop_assertions_that_both_arms_always_pass": true
   },
@@ -29,7 +35,8 @@
         "Builds the resource graph from SKILL.md rather than counting files",
         "Reports the missing reference and filename mismatch with exact paths",
         "Separates core-path breakage, stale UI metadata, and unused-resource cost",
-        "Does not claim an unchecked resource is valid"
+        "Does not claim an unchecked resource is valid",
+        "Begins the completed verdict with a severity-sorted one-sentence issue list covering every verified finding, states what happens and why it matters without fixes or evidence, and keeps unknowns in a separate 待验证 list"
       ]
     },
     {
@@ -75,9 +82,12 @@
       "prompt": "As a skill user, run a strict review and tell me whether this Skill is actually worth installing.",
       "skill_specific_assertions": [
         "Does not equate valid structure with behavioral value",
+        "Labels the supplied eval JSON as a definition rather than a recorded behavioral run",
         "Designs isolated with-skill and without-skill tasks with hidden assertions",
         "Compares task success, safety, evidence quality, user effort, and context cost",
-        "Withholds an uplift claim until improvement repeats"
+        "Withholds an uplift claim until improvement repeats",
+        "Keeps deterministic checks, critical-journey E2E, probabilistic eval, and continuous evidence in separate PASS, FAIL, UNVERIFIED, or N/A lanes",
+        "Requires a fresh run summary bound to the final package, host, model, Skill or prompt, dataset, rubric, and judge before team or public approval"
       ]
     },
     {
@@ -102,6 +112,30 @@
         "Reruns original positives, adjacent negatives, execution reproductions, and safety boundaries",
         "Does not mark moved unsafe behavior as fixed",
         "Separates raw-quality, discovery, execution, and readiness deltas"
+      ]
+    },
+    {
+      "id": "overconstrained-ordinary-heuristics",
+      "route": "staff-agent-engineer",
+      "artifact": "evals/fixtures/overconstrained-skill",
+      "prompt": "As a Staff agent engineer, strictly review this Skill's instruction architecture without editing it.",
+      "skill_specific_assertions": [
+        "Classifies hard instructions as safety invariants, product contracts, fragile operations, or ordinary heuristics before judging absolutes",
+        "Does not criticize the permission and privacy boundaries merely for being absolute",
+        "Treats the static questionnaire and output rigidity as an over-constraint risk until behavior evidence shows a real consequence",
+        "Designs representative short-answer and assumption-authorized tasks that could verify blocked useful work, needless questioning, or refusal before filing a behavioral finding"
+      ]
+    },
+    {
+      "id": "syntax-versus-behavioral-example",
+      "route": "staff-agent-engineer",
+      "artifact": "evals/fixtures/example-anchored-skill",
+      "prompt": "As a Staff agent engineer, strictly review how examples influence this Skill without changing the files.",
+      "skill_specific_assertions": [
+        "Distinguishes the parameterized Plan syntax interface from the domain-specific behavioral example",
+        "Does not report either example as a defect merely because it exists in the artifact",
+        "Requires observed copying, semantic narrowing, omitted valid variants, or another contract consequence before filing example anchoring as verified",
+        "Proposes a semantically different repository task and an equal comparison that can resolve the anchoring unknown"
       ]
     }
   ]

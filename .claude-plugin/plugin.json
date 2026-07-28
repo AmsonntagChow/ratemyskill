@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "ratemyskill",
   "displayName": "RateMySkill",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Audits Agent Skills for trigger precision, behavioral uplift, safety, package integrity, and marketplace readiness with evidence-backed release verdicts.",
   "author": {
     "name": "AmsonntagChow",

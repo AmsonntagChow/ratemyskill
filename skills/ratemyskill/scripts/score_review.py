@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = "1"
-POLICY_VERSION = "2"
+SCHEMA_VERSION = "2"
+POLICY_VERSION = "5"
 MAX_INPUT_BYTES = 1_048_576
 MAX_DIMENSIONS = 32
 MAX_EVIDENCE = 512
@@ -53,6 +53,21 @@ EVIDENCE_KINDS = {
     "claim",
 }
 EVIDENCE_RESULTS = {"pass", "fail", "mixed", "inconclusive"}
+EVIDENCE_LANES = {
+    "structural",
+    "deterministic-checks",
+    "critical-journey-e2e",
+    "probabilistic-eval",
+    "continuous-evidence",
+}
+ASSERTION_TYPES = {"deterministic", "probabilistic", "mixed", "not-applicable"}
+PANEL_LANES = (
+    "deterministic-checks",
+    "critical-journey-e2e",
+    "probabilistic-eval",
+    "continuous-evidence",
+)
+PANEL_STATUSES = {"pass", "fail", "unverified", "not-applicable"}
 RUNTIME_LEVELS = {"full", "partial", "static", "none"}
 SELECTION_LEVELS = {"tested", "partial", "claimed", "none"}
 INSTALL_LEVELS = {"tested", "partial", "claimed", "none"}
@@ -115,6 +130,28 @@ TARGET_REQUIRED_CHECKS = {
     "public-marketplace": {},
     "privileged-production": PRIVILEGED_REQUIRED_CHECKS,
     "high-stakes": HIGH_STAKES_REQUIRED_CHECKS,
+}
+TARGET_REQUIRED_CHECK_LANES = {
+    "sandboxed-authority-and-side-effects": {"critical-journey-e2e"},
+    "independent-domain-review": {"deterministic-checks"},
+    "human-control": {"critical-journey-e2e"},
+    "auditability": {"continuous-evidence"},
+    "incident-response": {"critical-journey-e2e", "continuous-evidence"},
+}
+TARGET_REQUIRED_PANEL_LANES = {
+    "local-draft": set(),
+    "team-shared": {
+        "deterministic-checks",
+        "critical-journey-e2e",
+        "probabilistic-eval",
+    },
+    "public-marketplace": {
+        "deterministic-checks",
+        "critical-journey-e2e",
+        "probabilistic-eval",
+    },
+    "privileged-production": set(PANEL_LANES),
+    "high-stakes": set(PANEL_LANES),
 }
 
 
@@ -189,6 +226,15 @@ def require_int(value: Any, path: str, minimum: int, maximum: int) -> int:
     return value
 
 
+def require_sha256(value: Any, path: str) -> str:
+    digest = require_string(value, path)
+    if not len(digest) == 71 or not digest.startswith("sha256:"):
+        raise ValidationError(path, "must use sha256:<64 lowercase hex characters>")
+    if any(character not in "0123456789abcdef" for character in digest[7:]):
+        raise ValidationError(path, "must use sha256:<64 lowercase hex characters>")
+    return digest
+
+
 def reject_unknown(obj: dict[str, Any], allowed: set[str], path: str) -> None:
     unknown = sorted(set(obj) - allowed)
     if unknown:
@@ -207,7 +253,15 @@ def validate_evidence(items: Any) -> tuple[list[dict[str, Any]], dict[str, dict[
         raise ValidationError("$.evidence", f"must contain at most {MAX_EVIDENCE} items")
     result: list[dict[str, Any]] = []
     by_id: dict[str, dict[str, Any]] = {}
-    allowed = {"id", "kind", "result", "reproducible", "fresh"}
+    allowed = {
+        "id",
+        "kind",
+        "result",
+        "reproducible",
+        "fresh",
+        "lane",
+        "assertion_type",
+    }
     for index, raw in enumerate(values):
         path = f"$.evidence[{index}]"
         item = require_object(raw, path)
@@ -222,6 +276,10 @@ def validate_evidence(items: Any) -> tuple[list[dict[str, Any]], dict[str, dict[
             "result": require_string(item["result"], f"{path}.result", EVIDENCE_RESULTS),
             "reproducible": require_bool(item["reproducible"], f"{path}.reproducible"),
             "fresh": require_bool(item["fresh"], f"{path}.fresh"),
+            "lane": require_string(item["lane"], f"{path}.lane", EVIDENCE_LANES),
+            "assertion_type": require_string(
+                item["assertion_type"], f"{path}.assertion_type", ASSERTION_TYPES
+            ),
         }
         by_id[evidence_id] = normalized
         result.append(normalized)
@@ -255,12 +313,29 @@ def has_reproducible_result(
     kinds: set[str],
     results: set[str],
     require_fresh: bool = False,
+    lanes: set[str] | None = None,
 ) -> bool:
     return any(
         evidence[item]["kind"] in kinds
         and evidence[item]["result"] in results
         and evidence[item]["reproducible"]
         and (not require_fresh or evidence[item]["fresh"])
+        and (lanes is None or evidence[item]["lane"] in lanes)
+        for item in ids
+    )
+
+
+def has_lane_result(
+    ids: list[str],
+    evidence: dict[str, dict[str, Any]],
+    lane: str,
+    results: set[str],
+) -> bool:
+    return any(
+        evidence[item]["lane"] == lane
+        and evidence[item]["result"] in results
+        and evidence[item]["reproducible"]
+        and evidence[item]["fresh"]
         for item in ids
     )
 
@@ -335,6 +410,7 @@ def validate_coverage(
         RUNTIME_EVIDENCE_KINDS,
         {"pass", "fail", "mixed"},
         require_fresh=True,
+        lanes={"critical-journey-e2e"},
     ):
         raise ValidationError(
             "$.coverage.runtime.evidence_ids",
@@ -361,6 +437,7 @@ def validate_coverage(
         SELECTION_EVIDENCE_KINDS,
         {"pass", "fail", "mixed"},
         require_fresh=True,
+        lanes={"probabilistic-eval"},
     ):
         raise ValidationError(
             "$.coverage.selection.evidence_ids",
@@ -434,19 +511,327 @@ def validate_coverage(
     }
 
 
+def validate_evidence_panel(
+    value: Any,
+    evidence_by_id: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    panel = require_object(value, "$.evidence_panel")
+    expected = set(PANEL_LANES)
+    reject_unknown(panel, expected, "$.evidence_panel")
+    require_fields(panel, expected, "$.evidence_panel")
+    result: dict[str, dict[str, Any]] = {}
+    for lane in PANEL_LANES:
+        path = f"$.evidence_panel.{lane}"
+        raw = require_object(panel[lane], path)
+        allowed = {"status", "evidence_ids"}
+        reject_unknown(raw, allowed, path)
+        require_fields(raw, allowed, path)
+        status = require_string(raw["status"], f"{path}.status", PANEL_STATUSES)
+        evidence_ids = validate_evidence_ids(
+            raw["evidence_ids"], f"{path}.evidence_ids", evidence_by_id
+        )
+        declared_ids = sorted(
+            evidence_id
+            for evidence_id, evidence in evidence_by_id.items()
+            if evidence["lane"] == lane
+        )
+        if evidence_ids != declared_ids:
+            raise ValidationError(
+                f"{path}.evidence_ids",
+                "must list every evidence item declared in this lane",
+            )
+        mismatched = [
+            evidence_id
+            for evidence_id in evidence_ids
+            if evidence_by_id[evidence_id]["lane"] != lane
+        ]
+        if mismatched:
+            raise ValidationError(
+                f"{path}.evidence_ids",
+                f"must not substitute evidence from another lane: {', '.join(mismatched)}",
+            )
+        if status == "pass" and not has_lane_result(
+            evidence_ids, evidence_by_id, lane, {"pass"}
+        ):
+            raise ValidationError(
+                f"{path}.evidence_ids",
+                "pass requires fresh, reproducible passing evidence from this lane",
+            )
+        if status == "pass" and any(
+            evidence_by_id[evidence_id]["result"] != "pass"
+            for evidence_id in evidence_ids
+        ):
+            raise ValidationError(
+                f"{path}.status",
+                "cannot be pass while this lane contains fail, mixed, or inconclusive evidence",
+            )
+        if status == "fail" and not has_lane_result(
+            evidence_ids, evidence_by_id, lane, {"fail", "mixed"}
+        ):
+            raise ValidationError(
+                f"{path}.evidence_ids",
+                "fail requires fresh, reproducible fail or mixed evidence from this lane",
+            )
+        if status in {"unverified", "not-applicable"} and evidence_ids:
+            raise ValidationError(
+                f"{path}.evidence_ids", f"must be empty when status is {status!r}"
+            )
+        if lane == "deterministic-checks" and any(
+            evidence_by_id[evidence_id]["assertion_type"] != "deterministic"
+            for evidence_id in evidence_ids
+        ):
+            raise ValidationError(
+                f"{path}.evidence_ids",
+                "deterministic checks require deterministic assertions",
+            )
+        if lane == "probabilistic-eval" and any(
+            evidence_by_id[evidence_id]["assertion_type"]
+            not in {"probabilistic", "mixed"}
+            for evidence_id in evidence_ids
+        ):
+            raise ValidationError(
+                f"{path}.evidence_ids",
+                "probabilistic eval requires probabilistic or mixed assertions",
+            )
+        result[lane] = {"status": status, "evidence_ids": evidence_ids}
+    return result
+
+
+def validate_behavioral_eval(
+    value: Any,
+    evidence_by_id: dict[str, dict[str, Any]],
+    evidence_panel: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    path = "$.behavioral_eval"
+    item = require_object(value, path)
+    status = require_string(item.get("status"), f"{path}.status", {"recorded", "unverified"})
+    if status == "unverified":
+        allowed = {"status", "evidence_ids"}
+        reject_unknown(item, allowed, path)
+        require_fields(item, allowed, path)
+        evidence_ids = validate_evidence_ids(
+            item["evidence_ids"], f"{path}.evidence_ids", evidence_by_id
+        )
+        if evidence_ids:
+            raise ValidationError(
+                f"{path}.evidence_ids", "must be empty when no behavioral run is recorded"
+            )
+        return {"status": status, "evidence_ids": []}
+
+    required = {
+        "status",
+        "evidence_ids",
+        "definition_id",
+        "run_id",
+        "package_sha256",
+        "host",
+        "model",
+        "skill_or_prompt_sha256",
+        "dataset_id",
+        "rubric_id",
+        "judge",
+        "selection",
+        "execution",
+        "variance_policy",
+    }
+    reject_unknown(item, required, path)
+    require_fields(item, required, path)
+    evidence_ids = validate_evidence_ids(
+        item["evidence_ids"], f"{path}.evidence_ids", evidence_by_id
+    )
+    if not evidence_ids or not has_lane_result(
+        evidence_ids,
+        evidence_by_id,
+        "probabilistic-eval",
+        {"pass", "fail", "mixed"},
+    ):
+        raise ValidationError(
+            f"{path}.evidence_ids",
+            "a recorded behavioral eval requires fresh, reproducible probabilistic-eval evidence",
+        )
+    if any(evidence_by_id[evidence_id]["lane"] != "probabilistic-eval" for evidence_id in evidence_ids):
+        raise ValidationError(
+            f"{path}.evidence_ids", "must contain only probabilistic-eval evidence"
+        )
+    panel_ids = evidence_panel["probabilistic-eval"]["evidence_ids"]
+    if not set(evidence_ids).issubset(panel_ids):
+        raise ValidationError(
+            f"{path}.evidence_ids",
+            "must also appear in the probabilistic-eval evidence-panel lane",
+        )
+
+    judge_path = f"{path}.judge"
+    judge = require_object(item["judge"], judge_path)
+    judge_fields = {"kind", "id", "version", "calibration_evidence_ids"}
+    reject_unknown(judge, judge_fields, judge_path)
+    require_fields(judge, judge_fields, judge_path)
+    judge_kind = require_string(judge["kind"], f"{judge_path}.kind", {"deterministic", "llm"})
+    calibration_ids = validate_evidence_ids(
+        judge["calibration_evidence_ids"],
+        f"{judge_path}.calibration_evidence_ids",
+        evidence_by_id,
+    )
+    if judge_kind == "llm" and not has_lane_result(
+        calibration_ids,
+        evidence_by_id,
+        "probabilistic-eval",
+        {"pass"},
+    ):
+        raise ValidationError(
+            f"{judge_path}.calibration_evidence_ids",
+            "an LLM judge requires fresh, reproducible passing calibration evidence",
+        )
+
+    selection_path = f"{path}.selection"
+    selection = require_object(item["selection"], selection_path)
+    selection_fields = {
+        "runs_per_case",
+        "positive_trials",
+        "positive_hits",
+        "near_miss_trials",
+        "false_triggers",
+        "minimum_hit_rate_percent",
+        "maximum_false_trigger_rate_percent",
+    }
+    reject_unknown(selection, selection_fields, selection_path)
+    require_fields(selection, selection_fields, selection_path)
+    runs_per_case = require_int(selection["runs_per_case"], f"{selection_path}.runs_per_case", 2, 10_000)
+    positive_trials = require_int(
+        selection["positive_trials"], f"{selection_path}.positive_trials", 1, 1_000_000
+    )
+    positive_hits = require_int(
+        selection["positive_hits"], f"{selection_path}.positive_hits", 0, positive_trials
+    )
+    near_miss_trials = require_int(
+        selection["near_miss_trials"], f"{selection_path}.near_miss_trials", 1, 1_000_000
+    )
+    false_triggers = require_int(
+        selection["false_triggers"], f"{selection_path}.false_triggers", 0, near_miss_trials
+    )
+    minimum_hit_rate = require_int(
+        selection["minimum_hit_rate_percent"],
+        f"{selection_path}.minimum_hit_rate_percent",
+        1,
+        100,
+    )
+    maximum_false_trigger_rate = require_int(
+        selection["maximum_false_trigger_rate_percent"],
+        f"{selection_path}.maximum_false_trigger_rate_percent",
+        0,
+        99,
+    )
+    if minimum_hit_rate <= maximum_false_trigger_rate:
+        raise ValidationError(
+            selection_path,
+            "minimum hit rate must be greater than maximum false-trigger rate",
+        )
+    if positive_trials % runs_per_case or near_miss_trials % runs_per_case:
+        raise ValidationError(
+            selection_path,
+            "positive and near-miss trial counts must be divisible by runs_per_case",
+        )
+
+    execution_path = f"{path}.execution"
+    execution = require_object(item["execution"], execution_path)
+    execution_fields = {
+        "runs_per_arm",
+        "with_skill_passes",
+        "without_skill_passes",
+        "minimum_uplift_points",
+    }
+    reject_unknown(execution, execution_fields, execution_path)
+    require_fields(execution, execution_fields, execution_path)
+    runs_per_arm = require_int(execution["runs_per_arm"], f"{execution_path}.runs_per_arm", 2, 1_000_000)
+    with_skill_passes = require_int(
+        execution["with_skill_passes"], f"{execution_path}.with_skill_passes", 0, runs_per_arm
+    )
+    without_skill_passes = require_int(
+        execution["without_skill_passes"],
+        f"{execution_path}.without_skill_passes",
+        0,
+        runs_per_arm,
+    )
+    minimum_uplift = require_int(
+        execution["minimum_uplift_points"],
+        f"{execution_path}.minimum_uplift_points",
+        1,
+        100,
+    )
+
+    hit_rate = Decimal(positive_hits) * Decimal("100") / Decimal(positive_trials)
+    false_trigger_rate = Decimal(false_triggers) * Decimal("100") / Decimal(near_miss_trials)
+    uplift = (
+        Decimal(with_skill_passes - without_skill_passes)
+        * Decimal("100")
+        / Decimal(runs_per_arm)
+    )
+    metrics_pass = (
+        hit_rate >= minimum_hit_rate
+        and false_trigger_rate <= maximum_false_trigger_rate
+        and uplift >= minimum_uplift
+    )
+    if not metrics_pass and evidence_panel["probabilistic-eval"]["status"] == "pass":
+        raise ValidationError(
+            "$.evidence_panel.probabilistic-eval.status",
+            "cannot be pass when a recorded selection or uplift threshold fails",
+        )
+
+    return {
+        "status": status,
+        "evidence_ids": evidence_ids,
+        "definition_id": require_string(item["definition_id"], f"{path}.definition_id"),
+        "run_id": require_string(item["run_id"], f"{path}.run_id"),
+        "package_sha256": require_sha256(item["package_sha256"], f"{path}.package_sha256"),
+        "host": require_string(item["host"], f"{path}.host"),
+        "model": require_string(item["model"], f"{path}.model"),
+        "skill_or_prompt_sha256": require_sha256(
+            item["skill_or_prompt_sha256"], f"{path}.skill_or_prompt_sha256"
+        ),
+        "dataset_id": require_string(item["dataset_id"], f"{path}.dataset_id"),
+        "rubric_id": require_string(item["rubric_id"], f"{path}.rubric_id"),
+        "judge": {
+            "kind": judge_kind,
+            "id": require_string(judge["id"], f"{judge_path}.id"),
+            "version": require_string(judge["version"], f"{judge_path}.version"),
+            "calibration_evidence_ids": calibration_ids,
+        },
+        "selection": {
+            "runs_per_case": runs_per_case,
+            "positive_trials": positive_trials,
+            "positive_hits": positive_hits,
+            "near_miss_trials": near_miss_trials,
+            "false_triggers": false_triggers,
+            "hit_rate_percent": as_json_number(hit_rate),
+            "false_trigger_rate_percent": as_json_number(false_trigger_rate),
+            "minimum_hit_rate_percent": minimum_hit_rate,
+            "maximum_false_trigger_rate_percent": maximum_false_trigger_rate,
+        },
+        "execution": {
+            "runs_per_arm": runs_per_arm,
+            "with_skill_passes": with_skill_passes,
+            "without_skill_passes": without_skill_passes,
+            "uplift_points": as_json_number(uplift),
+            "minimum_uplift_points": minimum_uplift,
+        },
+        "variance_policy": require_string(item["variance_policy"], f"{path}.variance_policy"),
+        "metrics_pass": metrics_pass,
+    }
+
+
 def validate_gates(
     items: Any,
     evidence_by_id: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     values = require_list(items, "$.gates")
-    allowed = {"id", "state", "evidence_ids", "retest_evidence_ids"}
+    allowed = {"id", "state", "evidence_ids", "retest_evidence_ids", "affected_targets"}
+    required = {"id", "state", "evidence_ids", "retest_evidence_ids"}
     result: list[dict[str, Any]] = []
     seen: set[str] = set()
     for index, raw in enumerate(values):
         path = f"$.gates[{index}]"
         item = require_object(raw, path)
         reject_unknown(item, allowed, path)
-        require_fields(item, allowed, path)
+        require_fields(item, required, path)
         gate_id = require_string(item["id"], f"{path}.id", set(SAFETY_GATES))
         if gate_id in seen:
             raise ValidationError(f"{path}.id", f"duplicate gate id {gate_id!r}")
@@ -456,6 +841,25 @@ def validate_gates(
         retest_ids = validate_evidence_ids(
             item["retest_evidence_ids"], f"{path}.retest_evidence_ids", evidence_by_id
         )
+        if "affected_targets" in item:
+            raw_targets = require_list(item["affected_targets"], f"{path}.affected_targets")
+            if not raw_targets:
+                raise ValidationError(
+                    f"{path}.affected_targets", "must contain at least one publish target"
+                )
+            affected_targets = [
+                require_string(
+                    value,
+                    f"{path}.affected_targets[{target_index}]",
+                    set(PUBLISH_THRESHOLDS),
+                )
+                for target_index, value in enumerate(raw_targets)
+            ]
+            if len(affected_targets) != len(set(affected_targets)):
+                raise ValidationError(f"{path}.affected_targets", "must not contain duplicates")
+            affected_targets = sorted(affected_targets)
+        else:
+            affected_targets = sorted(PUBLISH_THRESHOLDS)
         if state == "active" and not has_reproducible_result(
             evidence_ids,
             evidence_by_id,
@@ -483,6 +887,7 @@ def validate_gates(
                 "state": state,
                 "evidence_ids": evidence_ids,
                 "retest_evidence_ids": retest_ids,
+                "affected_targets": affected_targets,
             }
         )
     return sorted(result, key=lambda item: item["id"])
@@ -559,10 +964,11 @@ def validate_target_publish_checks(
             required_specs[check_id],
             {"pass"},
             require_fresh=True,
+            lanes=TARGET_REQUIRED_CHECK_LANES[check_id],
         ):
             raise ValidationError(
                 "$.publish_checks",
-                f"passing target-required check {check_id!r} requires fresh, reproducible evidence of an allowed kind: {', '.join(sorted(required_specs[check_id]))}",
+                f"passing target-required check {check_id!r} requires fresh, reproducible evidence of an allowed kind and lane: {', '.join(sorted(required_specs[check_id]))}",
             )
     return sorted(required_specs)
 
@@ -576,6 +982,8 @@ def validate(payload: Any) -> dict[str, Any]:
         "publish_target",
         "dimensions",
         "evidence",
+        "evidence_panel",
+        "behavioral_eval",
         "coverage",
         "gates",
         "publish_checks",
@@ -595,6 +1003,10 @@ def validate(payload: Any) -> dict[str, Any]:
     evidence, evidence_by_id = validate_evidence(root["evidence"])
     dimensions = validate_dimensions(root["dimensions"], evidence_by_id)
     coverage = validate_coverage(root["coverage"], evidence_by_id)
+    evidence_panel = validate_evidence_panel(root["evidence_panel"], evidence_by_id)
+    behavioral_eval = validate_behavioral_eval(
+        root["behavioral_eval"], evidence_by_id, evidence_panel
+    )
     gates = validate_gates(root["gates"], evidence_by_id)
     publish_checks = validate_publish_checks(root["publish_checks"], evidence_by_id)
     target_required_check_ids = validate_target_publish_checks(
@@ -607,6 +1019,8 @@ def validate(payload: Any) -> dict[str, Any]:
         "publish_target": publish_target,
         "dimensions": dimensions,
         "evidence": evidence,
+        "evidence_panel": evidence_panel,
+        "behavioral_eval": behavioral_eval,
         "coverage": coverage,
         "gates": gates,
         "publish_checks": publish_checks,
@@ -709,6 +1123,15 @@ def compute(data: dict[str, Any]) -> dict[str, Any]:
                     "value": as_json_number(TEAM_EVIDENCE_CAP),
                 }
             )
+        if data["behavioral_eval"]["status"] != "recorded":
+            distribution_evidence_gaps.append("behavioral-eval-summary")
+            applied_caps.append(
+                {
+                    "id": "team-behavioral-eval-summary",
+                    "source": "distribution-evidence",
+                    "value": as_json_number(TEAM_EVIDENCE_CAP),
+                }
+            )
     if data["publish_target"] in {"public-marketplace", "privileged-production", "high-stakes"}:
         if runtime_level in {"static", "none"}:
             distribution_evidence_gaps.append("runtime")
@@ -746,15 +1169,56 @@ def compute(data: dict[str, Any]) -> dict[str, Any]:
                     "value": as_json_number(PUBLIC_EVIDENCE_CAP),
                 }
             )
+        if data["behavioral_eval"]["status"] != "recorded":
+            distribution_evidence_gaps.append("behavioral-eval-summary")
+            applied_caps.append(
+                {
+                    "id": "public-behavioral-eval-summary",
+                    "source": "marketplace-evidence",
+                    "value": as_json_number(PUBLIC_EVIDENCE_CAP),
+                }
+            )
+
+    evidence_panel_failures = [
+        lane for lane in PANEL_LANES if data["evidence_panel"][lane]["status"] == "fail"
+    ]
+    evidence_panel_gaps = sorted(
+        lane
+        for lane in TARGET_REQUIRED_PANEL_LANES[data["publish_target"]]
+        if data["evidence_panel"][lane]["status"] in {"unverified", "not-applicable"}
+    )
+    if evidence_panel_gaps:
+        lane_cap = (
+            TEAM_EVIDENCE_CAP
+            if data["publish_target"] == "team-shared"
+            else PUBLIC_EVIDENCE_CAP
+        )
+        for lane in evidence_panel_gaps:
+            distribution_evidence_gaps.append(f"evidence-lane:{lane}")
+            applied_caps.append(
+                {
+                    "id": f"required-evidence-lane-{lane}",
+                    "source": "evidence-panel",
+                    "value": as_json_number(lane_cap),
+                }
+            )
 
     active_gates: list[dict[str, Any]] = []
+    blocking_gates: list[dict[str, Any]] = []
     for gate in data["gates"]:
         if gate["state"] == "active":
             cap = SAFETY_GATES[gate["id"]]
-            active_gates.append({"cap": as_json_number(cap), "id": gate["id"]})
-            applied_caps.append(
-                {"id": gate["id"], "source": "safety-gate", "value": as_json_number(cap)}
-            )
+            active_gate = {
+                "affected_targets": gate["affected_targets"],
+                "cap": as_json_number(cap),
+                "id": gate["id"],
+            }
+            active_gates.append(active_gate)
+            if data["publish_target"] in gate["affected_targets"]:
+                blocking_gates.append(active_gate)
+                applied_caps.append(
+                    {"id": gate["id"], "source": "safety-gate", "value": as_json_number(cap)}
+                )
 
     readiness_score = min([raw_score] + [Decimal(str(item["value"])) for item in applied_caps])
     threshold = PUBLISH_THRESHOLDS[data["publish_target"]]
@@ -771,10 +1235,9 @@ def compute(data: dict[str, Any]) -> dict[str, Any]:
         for item in data["publish_checks"]
         if not item["required"] and item["status"] != "pass"
     ]
-
-    if active_gates:
+    if blocking_gates:
         decision = "BLOCKED"
-    elif required_failed:
+    elif required_failed or evidence_panel_failures:
         decision = "NOT_READY"
     elif required_unverified or distribution_evidence_gaps:
         decision = "INSUFFICIENT_EVIDENCE"
@@ -799,6 +1262,8 @@ def compute(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "active_gates": active_gates,
         "applied_caps": sorted(applied_caps, key=lambda item: (item["value"], item["id"])),
+        "blocking_gates": blocking_gates,
+        "behavioral_eval": data["behavioral_eval"],
         "coverage": {
             "confidence": confidence,
             "cold_install": install_level,
@@ -810,6 +1275,9 @@ def compute(data: dict[str, Any]) -> dict[str, Any]:
         "decision": decision,
         "dimensions": dimensions_output,
         "distribution_evidence_gaps": distribution_evidence_gaps,
+        "evidence_panel": data["evidence_panel"],
+        "evidence_panel_failures": evidence_panel_failures,
+        "evidence_panel_gaps": evidence_panel_gaps,
         "mode": data["mode"],
         "ok": True,
         "policy_version": POLICY_VERSION,
@@ -828,7 +1296,7 @@ def compute(data: dict[str, Any]) -> dict[str, Any]:
             "raw_quality": as_json_number(raw_score),
             "publish_readiness": as_json_number(readiness_score),
         },
-        "vetoed": bool(active_gates),
+        "vetoed": bool(blocking_gates),
     }
 
 

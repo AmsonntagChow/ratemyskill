@@ -6,11 +6,11 @@ Use this when the user chooses the local-draft quick check. Find the shortest de
 
 1. State the skill job and trigger boundary in one sentence each.
 2. Validate the canonical `SKILL.md`, direct references, metadata, and any executable resource used by the core path.
-3. Try one intended prompt and one shared-keyword near miss.
-4. Run one representative task and compare the obvious baseline when feasible.
+3. If testing discovery, read `references/evaluation.md`, then try one intended prompt and one shared-keyword near miss.
+4. If comparing task behavior, read `references/evaluation.md`, then run one representative equal-arm comparison when feasible.
 5. Test one missing-input or tool-failure path.
 6. Inspect authority, untrusted-content, secret, side-effect, network, and dependency instructions before executing anything.
-7. Stop when the top blockers and their acceptance tests are clear.
+7. Stop when the highest-priority review scope and its acceptance tests are clear, then report every issue verified within that scope.
 
 ## Priority order
 
@@ -24,20 +24,6 @@ Spend review time in this order:
 
 Do not add low-impact wording notes while a higher-order failure remains unresolved.
 
-## Compact output
+## Completion
 
-Return:
-
-```text
-Requested target: local draft
-Maximum safe target:
-Decision:
-Discovery signal:
-Execution signal:
-Top blockers: at most 3
-Fastest actions: at most 3
-Acceptance checks:
-What remains unverified:
-```
-
-Quick does not mean lenient. Activate any verified safety veto and label missing evidence honestly.
+Quick does not mean lenient. The scope may be narrow, but report every issue verified within it and keep missing proof as unknown. Render the single canonical `Verdict` and apply veto scope and decision order from `references/review-contract.md`; do not define a second quick-mode output or scoring format here.

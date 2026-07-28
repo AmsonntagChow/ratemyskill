@@ -73,15 +73,26 @@ RateMySkill keeps discovery and execution separate:
 1. **Discovery:** do intended requests select the Skill, while shared-keyword near misses stay out?
 2. **Execution:** once selected explicitly, does the Skill reliably improve task outcomes over an equal no-Skill baseline?
 
-An explicit `$ratemyskill` call proves execution, not automatic discovery. A valid folder proves packaging, not usefulness. Public-release approval therefore requires clean-install evidence, fresh selection tests, with/without execution evidence, safety review, and accurate trust materials.
+An explicit `$ratemyskill` call proves execution, not automatic discovery. A valid folder, green repository CI, and valid eval JSON prove structure, not usefulness. Team and public approval therefore require a recorded run of the final package: repeated selection hit and false-trigger rates, with-Skill and without-Skill results and uplift, declared thresholds and variance policy, plus host/model/dataset/rubric/judge identities and package digests.
 
-It also uses hard release vetoes for secret exfiltration, unauthorized side effects, uncontrolled code execution, hidden network or telemetry, fabricated success, broken core packages, unsafe trigger overreach, trust inversion, and license or provenance breaches. A good average score cannot cancel one of those failures.
+It also uses hard release vetoes for secret exfiltration, unauthorized side effects, uncontrolled code execution, hidden network or telemetry, fabricated success, broken core packages, unsafe trigger overreach, trust inversion, and license or provenance breaches. A good average score cannot cancel one of those failures for an affected distribution target.
 
 ## Verdict
 
-A review leads with the decision and the evidence ceiling:
+A completed review first gives a one-line summary of every verified issue, followed by a separate list of what remains unverified, then the decision and evidence ceiling:
 
 ```text
+Issue list:
+- [S-002 · HIGH] Trigger scope is too broad: ordinary writing requests can activate the Skill and divert unrelated work.
+待验证:
+- Implicit selection has not been tested in a fresh session, so marketplace discovery remains unknown.
+
+Evidence panel:
+- Deterministic checks: PASS
+- Critical-journey E2E: PASS
+- Probabilistic eval: UNVERIFIED
+- Continuous evidence: N/A
+
 Requested distribution:
 Maximum safe distribution:
 Decision: READY | READY WITH CONDITIONS | NOT READY | BLOCKED | INSUFFICIENT EVIDENCE
@@ -98,17 +109,19 @@ Top 3 actions:
 Retest plan:
 ```
 
-Each finding includes exact reproduction, expected and actual behavior, evidence strength, impact, the smallest safe fix, an acceptance test, and a nearby regression case. Re-reviews preserve the same finding IDs, target, rubric, prompts, and assertions.
+The opening list is exhaustive, severity-sorted, and limited to one plain-language sentence per item: severity, failure, and consequence. Fixes and evidence stay in the detailed findings. The four evidence lanes never substitute for one another; `N/A` means genuinely out of scope, while an unrun check is `UNVERIFIED`. If no issue is verified, the review says so explicitly and still names what remains unverified. Each detailed finding includes exact reproduction, expected and actual behavior, evidence strength, impact, the smallest safe fix, an acceptance test, and a nearby regression case.
 
 ## Scoring
 
-Numeric scoring is optional. The bundled scorer uses only the Python standard library, validates every evidence link, applies target-specific evidence ceilings, fingerprints the rubric, and enforces fixed vetoes.
+Numeric scoring is optional. The bundled scorer uses only the Python standard library, validates every evidence link, applies target-specific evidence ceilings, fingerprints the rubric, and enforces vetoes only for their declared distribution targets.
 
 ```bash
 python3 skills/ratemyskill/scripts/score_review.py --pretty evals/scorecards/blocked-release.json
 ```
 
-The raw quality score and the evidence-limited release decision remain separate. Missing runtime, implicit-selection, reference, or cold-install evidence cannot be hidden by a polished scorecard.
+The raw quality score and the evidence-limited release decision remain separate. Scorecard schema v2 labels every evidence item by lane and assertion type, rejects cross-lane substitution and contradictory PASS lanes, and calculates behavioral hit rate, false-trigger rate, and uplift from a recorded summary. Structural evidence cannot satisfy runtime or high-risk behavioral checks. Required `UNVERIFIED` or `N/A` lanes remain visible gaps, and vacuous thresholds cannot self-authorize a release.
+
+Schema v2 is a fail-closed migration in the optional scorer. Existing v1 scorecards must add per-evidence `lane` and `assertion_type`, the complete `evidence_panel`, and `behavioral_eval`; old evidence must not be relabeled fresh without rerunning it. The scorer returns a clear schema-version error instead of guessing these fields.
 
 ## Trust and safety
 

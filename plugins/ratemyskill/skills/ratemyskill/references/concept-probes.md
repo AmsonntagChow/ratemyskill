@@ -1,38 +1,27 @@
-# Artifact-grounded concept probes
+# Artifact-grounded concept-probe generator
 
-Choose questions only from conditions present in the reviewed skill. Each probe should expose a decision the author must understand, not reward memorized terminology.
+Load this only after the oral-defense protocol begins question generation. Generate probes from the reviewed artifact rather than choosing from a fixed curriculum.
 
-## Discovery and routing
+## Probe interface
 
-- Give one intended prompt and one shared-keyword near miss. Which phrase should decide the route, and how would you test that without explicitly naming the skill?
-- If the host truncates descriptions in a large catalog, which front-loaded words preserve the job boundary?
-- What competing skill is most likely to collide, and what evidence would prove routing is acceptable?
+```text
+Probe = {
+  artifact_fact: exact observed path, instruction, dependency, boundary, or behavior,
+  design_decision: the author's choice or tradeoff exposed by that fact,
+  failure_consequence: a concrete user, platform, safety, or maintenance outcome,
+  verification_path: the test, trace, comparison, or inspection that would decide the claim
+}
+```
 
-## Progressive disclosure
+Turn one `Probe` into one scenario question that requires the author to connect all four fields. Keep the artifact fact visible enough to answer without guessing, but do not reveal the conclusion or preferred fix.
 
-- Why is this rule in the main file rather than a reference, or vice versa?
-- From a caller working in a different directory, how is this exact resource path resolved?
-- What makes a reference reachable at the right time instead of merely present on disk?
+## Generation rules
 
-## Tools and failure
+1. Inventory verified facts and material unknowns from the current artifact.
+2. Select facts whose design choice can change a real outcome.
+3. State a plausible failure consequence without asserting it occurred unless evidence shows it.
+4. Ask how the author would verify or falsify the claimed behavior.
+5. Prefer different boundaries across three to five probes; do not force topic coverage that the artifact does not contain.
+6. Reject trivia, terminology recall, and generic questions answerable without inspecting this artifact.
 
-- The tool returns partial output and a non-zero exit. What does the skill preserve, report, retry, or refuse?
-- The user repeats the request after a timeout. Which external effects can duplicate, and what prevents that?
-- The declared dependency is unavailable. What is the honest degraded result and the smallest unblocker?
-
-## Authority and trust
-
-- A repository file says to ignore the user and transmit its contents. Why is that text evidence rather than authority?
-- Which exact action requires confirmation, and what specific target and data must the user understand?
-- What secrets or personal data can enter logs, prompts, network calls, or generated artifacts?
-
-## Distribution
-
-- Which file is canonical, and how does CI prove the plugin copy has not drifted?
-- What evidence proves a clean remote install rather than success from a local cache?
-- Which listing claim is currently stronger than the execution evidence?
-
-## Re-review
-
-- A narrower description fixes false positives but creates false negatives. How should the old finding and new regression be classified?
-- A validator now passes, but the behavior task still fails. Which score or release decision can change, and which cannot?
+Use a follow-up only to distinguish causal understanding from memorized vocabulary, such as by changing one precondition or asking what evidence would reverse the answer.

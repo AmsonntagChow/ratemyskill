@@ -30,14 +30,6 @@ For public distribution, expect proportionate README, license, security-reportin
 
 Check that policies describe what the package actually does. “No data collection” is false when a bundled service or developer endpoint receives user content.
 
-## Evidence expected by target
+## Distribution evidence
 
-| Target | Evidence |
-|---|---|
-| Local draft | Structural validation and one representative execution |
-| Team shared | Positive and near-miss trigger tests, representative tasks, permission disclosure, rollback or removal path |
-| Public marketplace | Clean-package install, repeated discovery tests, with/without execution evidence, safety scan, support and legal materials |
-| Privileged production | Tool and data-flow tests, least authority, audit trail, failure recovery, incident ownership |
-| High stakes | Independent domain review, human-control plan, compliance evidence, change approval, incident exercises |
-
-Do not convert missing review evidence into a failing product claim. Cap the maximum safe distribution and name the smallest evidence package that can raise it.
+Use the distribution ladder and evidence ceilings in `references/review-contract.md`. A green validator proves only that eval definitions and packages are structurally valid. Require the recorded behavioral summary in `references/evaluation.md`, bound to the final install digest, before public approval. Do not redefine the ladder for the curator role or convert missing review evidence into a failed product claim. Name the smallest evidence package that can raise the current ceiling.

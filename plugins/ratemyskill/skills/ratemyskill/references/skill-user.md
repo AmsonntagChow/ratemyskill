@@ -16,7 +16,7 @@ Flag a promise that cannot be observed or an input requirement hidden until late
 
 ## Representative tasks
 
-Use at least one common task and one awkward but in-scope task. For strict or higher reviews, add a missing-input or partial-evidence case. Compare with and without the skill when possible.
+Use at least one common task and one awkward but in-scope task. For strict or higher reviews, add a missing-input or partial-evidence case. When planning or running a with/without comparison, first read `references/evaluation.md` rather than defining a second comparison protocol here.
 
 Judge:
 

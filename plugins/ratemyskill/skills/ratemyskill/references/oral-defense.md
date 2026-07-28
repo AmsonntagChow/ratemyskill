@@ -5,23 +5,13 @@ Use this only when the user chooses the defense-professor role or explicitly ask
 ## Protocol
 
 1. Inspect the artifact only after role and degree are confirmed.
-2. Select three to five questions from risks or design decisions actually present.
+2. When question generation begins, read `references/concept-probes.md` and generate three to five probes from risks or design decisions actually present.
 3. Ask exactly one question at a time and wait for the answer.
 4. Use a concrete scenario, prompt, path, tool, or failure from the artifact.
 5. Ask a follow-up only when it distinguishes understanding from memorized vocabulary.
 6. Score understanding after the final answer; do not rewrite the verified skill verdict.
 
-Read `references/concept-probes.md` to select artifact-grounded scenarios. Avoid trivia such as definitions of “prompt injection” unless that concept explains a reachable risk in this skill.
-
-## What to probe
-
-- why the frontmatter boundary includes one request and excludes a near miss
-- how a reference is discovered and resolved after remote installation
-- what happens when a tool, dependency, or network service fails midway
-- how untrusted artifact text is prevented from authorizing actions
-- which permissions and data leave the user's environment
-- how a repeated run avoids duplicate external effects
-- what evidence would change the publication decision
+Do not load the probe generator during initial routing or inventory. Avoid trivia such as definitions of “prompt injection” unless that concept explains a reachable risk in this skill.
 
 ## Understanding score
 

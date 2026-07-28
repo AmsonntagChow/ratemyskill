@@ -18,13 +18,34 @@ SPEC.loader.exec_module(score_review)
 
 def base_payload():
     evidence = [
-        {"id": "e-install", "kind": "install", "result": "pass", "reproducible": True, "fresh": True},
-        {"id": "e-reference", "kind": "reference", "result": "pass", "reproducible": True, "fresh": True},
-        {"id": "e-runtime", "kind": "runtime", "result": "pass", "reproducible": True, "fresh": True},
-        {"id": "e-selection", "kind": "test", "result": "pass", "reproducible": True, "fresh": True},
+        {
+            "id": "e-install", "kind": "install", "result": "pass",
+            "reproducible": True, "fresh": True, "lane": "structural",
+            "assertion_type": "deterministic",
+        },
+        {
+            "id": "e-reference", "kind": "reference", "result": "pass",
+            "reproducible": True, "fresh": True, "lane": "structural",
+            "assertion_type": "deterministic",
+        },
+        {
+            "id": "e-runtime", "kind": "runtime", "result": "pass",
+            "reproducible": True, "fresh": True, "lane": "critical-journey-e2e",
+            "assertion_type": "deterministic",
+        },
+        {
+            "id": "e-selection", "kind": "test", "result": "pass",
+            "reproducible": True, "fresh": True, "lane": "probabilistic-eval",
+            "assertion_type": "mixed",
+        },
+        {
+            "id": "e-deterministic", "kind": "test", "result": "pass",
+            "reproducible": True, "fresh": True, "lane": "deterministic-checks",
+            "assertion_type": "deterministic",
+        },
     ]
     return {
-        "schema_version": "1",
+        "schema_version": "2",
         "mode": "skill-user",
         "rubric_id": "test/default-v1",
         "publish_target": "public-marketplace",
@@ -59,6 +80,46 @@ def base_payload():
             },
         ],
         "evidence": evidence,
+        "evidence_panel": {
+            "deterministic-checks": {"status": "pass", "evidence_ids": ["e-deterministic"]},
+            "critical-journey-e2e": {"status": "pass", "evidence_ids": ["e-runtime"]},
+            "probabilistic-eval": {"status": "pass", "evidence_ids": ["e-selection"]},
+            "continuous-evidence": {"status": "not-applicable", "evidence_ids": []},
+        },
+        "behavioral_eval": {
+            "status": "recorded",
+            "evidence_ids": ["e-selection"],
+            "definition_id": "ratemyskill-evals-v1",
+            "run_id": "run-test-001",
+            "package_sha256": "sha256:" + "a" * 64,
+            "host": "test-host",
+            "model": "test-model",
+            "skill_or_prompt_sha256": "sha256:" + "b" * 64,
+            "dataset_id": "test-dataset-v1",
+            "rubric_id": "test-rubric-v1",
+            "judge": {
+                "kind": "deterministic",
+                "id": "hidden-assertions",
+                "version": "1",
+                "calibration_evidence_ids": [],
+            },
+            "selection": {
+                "runs_per_case": 3,
+                "positive_trials": 6,
+                "positive_hits": 6,
+                "near_miss_trials": 6,
+                "false_triggers": 0,
+                "minimum_hit_rate_percent": 80,
+                "maximum_false_trigger_rate_percent": 10,
+            },
+            "execution": {
+                "runs_per_arm": 4,
+                "with_skill_passes": 4,
+                "without_skill_passes": 2,
+                "minimum_uplift_points": 20,
+            },
+            "variance_policy": "Repeat each case and fail closed when a threshold is unstable.",
+        },
         "coverage": {
             "runtime": {"level": "full", "evidence_ids": ["e-runtime"]},
             "selection": {"level": "tested", "evidence_ids": ["e-selection"]},
@@ -82,11 +143,11 @@ def base_payload():
 
 
 TARGET_CHECK_FIXTURES = (
-    ("sandboxed-authority-and-side-effects", "e-authority", "runtime"),
-    ("independent-domain-review", "e-domain-review", "document"),
-    ("human-control", "e-human-control", "test"),
-    ("auditability", "e-auditability", "log"),
-    ("incident-response", "e-incident-response", "test"),
+    ("sandboxed-authority-and-side-effects", "e-authority", "runtime", "critical-journey-e2e"),
+    ("independent-domain-review", "e-domain-review", "document", "deterministic-checks"),
+    ("human-control", "e-human-control", "test", "critical-journey-e2e"),
+    ("auditability", "e-auditability", "log", "continuous-evidence"),
+    ("incident-response", "e-incident-response", "test", "critical-journey-e2e"),
 )
 
 
@@ -97,7 +158,23 @@ def add_target_checks(payload, target):
         fixtures = TARGET_CHECK_FIXTURES
     else:
         fixtures = ()
-    for check_id, evidence_id, kind in fixtures:
+    if target == "privileged-production":
+        payload["evidence"].append(
+            {
+                "id": "e-privileged-monitoring",
+                "kind": "log",
+                "result": "pass",
+                "reproducible": True,
+                "fresh": True,
+                "lane": "continuous-evidence",
+                "assertion_type": "deterministic",
+            }
+        )
+        payload["evidence_panel"]["continuous-evidence"] = {
+            "status": "pass",
+            "evidence_ids": ["e-privileged-monitoring"],
+        }
+    for check_id, evidence_id, kind, lane in fixtures:
         payload["evidence"].append(
             {
                 "id": evidence_id,
@@ -105,8 +182,13 @@ def add_target_checks(payload, target):
                 "result": "pass",
                 "reproducible": True,
                 "fresh": True,
+                "lane": lane,
+                "assertion_type": "deterministic",
             }
         )
+        lane_record = payload["evidence_panel"][lane]
+        lane_record["status"] = "pass"
+        lane_record["evidence_ids"].append(evidence_id)
         payload["publish_checks"].append(
             {
                 "id": check_id,
@@ -136,7 +218,11 @@ class ScoreReviewTests(unittest.TestCase):
 
     def add_active_gate(self, payload, gate_id):
         payload["evidence"].append(
-            {"id": "e-veto", "kind": "static-analysis", "result": "fail", "reproducible": True, "fresh": True}
+            {
+                "id": "e-veto", "kind": "static-analysis", "result": "fail",
+                "reproducible": True, "fresh": True, "lane": "structural",
+                "assertion_type": "deterministic",
+            }
         )
         payload["gates"] = [
             {
@@ -247,7 +333,7 @@ class ScoreReviewTests(unittest.TestCase):
         payload = base_payload()
         payload["publish_target"] = "high-stakes"
         add_target_checks(payload, "high-stakes")
-        for check_id, _, _ in TARGET_CHECK_FIXTURES:
+        for check_id, _, _, _ in TARGET_CHECK_FIXTURES:
             with self.subTest(check_id=check_id):
                 candidate = copy.deepcopy(payload)
                 candidate["publish_checks"] = [
@@ -347,12 +433,265 @@ class ScoreReviewTests(unittest.TestCase):
         self.assertEqual(result["distribution_evidence_gaps"], ["runtime", "selection"])
         self.assertEqual(result["decision"], "INSUFFICIENT_EVIDENCE")
 
+    def test_team_shared_requires_recorded_behavioral_eval_summary(self):
+        payload = base_payload()
+        payload["publish_target"] = "team-shared"
+        payload["behavioral_eval"] = {"status": "unverified", "evidence_ids": []}
+        result = self.compute(payload)
+        self.assertEqual(result["decision"], "INSUFFICIENT_EVIDENCE")
+        self.assertEqual(result["distribution_evidence_gaps"], ["behavioral-eval-summary"])
+
+    def test_public_marketplace_requires_run_summary_not_eval_definition(self):
+        payload = base_payload()
+        payload["behavioral_eval"] = {"status": "unverified", "evidence_ids": []}
+        result = self.compute(payload)
+        self.assertEqual(result["decision"], "INSUFFICIENT_EVIDENCE")
+        self.assertIn("behavioral-eval-summary", result["distribution_evidence_gaps"])
+
+    def test_behavioral_summary_reports_selection_and_uplift_metrics(self):
+        result = self.compute(base_payload())
+        summary = result["behavioral_eval"]
+        self.assertEqual(summary["selection"]["hit_rate_percent"], 100)
+        self.assertEqual(summary["selection"]["false_trigger_rate_percent"], 0)
+        self.assertEqual(summary["execution"]["uplift_points"], 50)
+        self.assertTrue(summary["metrics_pass"])
+
+    def test_passing_probabilistic_lane_rejects_failed_threshold(self):
+        payload = base_payload()
+        payload["behavioral_eval"]["selection"]["positive_hits"] = 1
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.evidence_panel.probabilistic-eval.status")
+
+    def test_failed_evidence_lane_prevents_ready_decision(self):
+        payload = base_payload()
+        next(item for item in payload["evidence"] if item["id"] == "e-selection")["result"] = "fail"
+        payload["evidence_panel"]["probabilistic-eval"]["status"] = "fail"
+        result = self.compute(payload)
+        self.assertEqual(result["decision"], "NOT_READY")
+        self.assertEqual(result["evidence_panel_failures"], ["probabilistic-eval"])
+
+    def test_passing_lane_rejects_any_failing_evidence(self):
+        payload = base_payload()
+        payload["evidence"].append(
+            {
+                "id": "e-deterministic-failure",
+                "kind": "test",
+                "result": "fail",
+                "reproducible": True,
+                "fresh": True,
+                "lane": "deterministic-checks",
+                "assertion_type": "deterministic",
+            }
+        )
+        payload["evidence_panel"]["deterministic-checks"]["evidence_ids"].append(
+            "e-deterministic-failure"
+        )
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.evidence_panel.deterministic-checks.status")
+
+    def test_lane_cannot_hide_declared_failing_evidence(self):
+        payload = base_payload()
+        payload["evidence"].append(
+            {
+                "id": "e-hidden-failure",
+                "kind": "test",
+                "result": "fail",
+                "reproducible": True,
+                "fresh": True,
+                "lane": "deterministic-checks",
+                "assertion_type": "deterministic",
+            }
+        )
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(
+            caught.exception.path,
+            "$.evidence_panel.deterministic-checks.evidence_ids",
+        )
+
+    def test_required_unverified_or_not_applicable_lane_blocks_public_readiness(self):
+        for status in ("unverified", "not-applicable"):
+            with self.subTest(status=status):
+                payload = base_payload()
+                next(
+                    item for item in payload["evidence"] if item["id"] == "e-deterministic"
+                )["lane"] = "structural"
+                payload["evidence_panel"]["deterministic-checks"] = {
+                    "status": status,
+                    "evidence_ids": [],
+                }
+                result = self.compute(payload)
+                self.assertEqual(result["decision"], "INSUFFICIENT_EVIDENCE")
+                self.assertEqual(result["scores"]["publish_readiness"], 69)
+                self.assertEqual(result["evidence_panel_gaps"], ["deterministic-checks"])
+                self.assertIn(
+                    "evidence-lane:deterministic-checks",
+                    result["distribution_evidence_gaps"],
+                )
+
+    def test_structural_test_cannot_claim_runtime_coverage(self):
+        payload = base_payload()
+        runtime = next(item for item in payload["evidence"] if item["id"] == "e-runtime")
+        runtime["kind"] = "test"
+        runtime["lane"] = "structural"
+        payload["evidence_panel"]["critical-journey-e2e"] = {
+            "status": "not-applicable",
+            "evidence_ids": [],
+        }
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.coverage.runtime.evidence_ids")
+
+    def test_structural_evidence_cannot_pass_privileged_authority_check(self):
+        payload = base_payload()
+        payload["publish_target"] = "privileged-production"
+        add_target_checks(payload, "privileged-production")
+        next(item for item in payload["evidence"] if item["id"] == "e-authority")[
+            "lane"
+        ] = "structural"
+        payload["evidence_panel"]["critical-journey-e2e"]["evidence_ids"].remove(
+            "e-authority"
+        )
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.publish_checks")
+
+    def test_behavioral_thresholds_must_be_non_vacuous(self):
+        mutations = (
+            ("selection", "minimum_hit_rate_percent", 0),
+            ("selection", "maximum_false_trigger_rate_percent", 100),
+            ("execution", "minimum_uplift_points", 0),
+        )
+        for section, field, value in mutations:
+            with self.subTest(section=section, field=field):
+                payload = base_payload()
+                payload["behavioral_eval"][section][field] = value
+                with self.assertRaises(score_review.ValidationError):
+                    score_review.validate(payload)
+
+    def test_behavioral_thresholds_reject_inverted_selection_boundary(self):
+        payload = base_payload()
+        payload["behavioral_eval"]["selection"]["minimum_hit_rate_percent"] = 10
+        payload["behavioral_eval"]["selection"]["maximum_false_trigger_rate_percent"] = 10
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.behavioral_eval.selection")
+
+    def test_evidence_panel_rejects_cross_lane_substitution(self):
+        payload = base_payload()
+        payload["evidence_panel"]["critical-journey-e2e"]["evidence_ids"] = [
+            "e-deterministic"
+        ]
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(
+            caught.exception.path,
+            "$.evidence_panel.critical-journey-e2e.evidence_ids",
+        )
+
+    def test_deterministic_lane_rejects_probabilistic_assertion(self):
+        payload = base_payload()
+        next(item for item in payload["evidence"] if item["id"] == "e-deterministic")[
+            "assertion_type"
+        ] = "probabilistic"
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(
+            caught.exception.path,
+            "$.evidence_panel.deterministic-checks.evidence_ids",
+        )
+
+    def test_llm_judge_requires_calibration_evidence(self):
+        payload = base_payload()
+        payload["behavioral_eval"]["judge"]["kind"] = "llm"
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(
+            caught.exception.path,
+            "$.behavioral_eval.judge.calibration_evidence_ids",
+        )
+
     def test_secret_or_data_exfiltration_is_a_veto(self):
         payload = base_payload()
         self.add_active_gate(payload, "secret-or-data-exfiltration")
         result = self.compute(payload)
         self.assertEqual(result["scores"], {"raw_quality": 90, "publish_readiness": 39})
         self.assertEqual(result["decision"], "BLOCKED")
+        self.assertTrue(result["vetoed"])
+        self.assertEqual(result["blocking_gates"], result["active_gates"])
+
+    def test_omitted_gate_scope_defaults_to_all_targets_for_backward_compatibility(self):
+        payload = base_payload()
+        self.add_active_gate(payload, "secret-or-data-exfiltration")
+        result = self.compute(payload)
+        self.assertEqual(
+            result["active_gates"][0]["affected_targets"],
+            sorted(score_review.PUBLISH_THRESHOLDS),
+        )
+        self.assertEqual(result["blocking_gates"], result["active_gates"])
+
+    def test_out_of_scope_active_gate_is_reported_without_blocking_target(self):
+        payload = base_payload()
+        payload["publish_target"] = "local-draft"
+        self.add_active_gate(payload, "license-or-provenance-breach")
+        payload["gates"][0]["affected_targets"] = ["public-marketplace"]
+        result = self.compute(payload)
+        self.assertEqual(result["decision"], "READY")
+        self.assertEqual(result["scores"]["publish_readiness"], 90)
+        self.assertEqual(
+            result["active_gates"],
+            [
+                {
+                    "affected_targets": ["public-marketplace"],
+                    "cap": 39,
+                    "id": "license-or-provenance-breach",
+                }
+            ],
+        )
+        self.assertEqual(result["blocking_gates"], [])
+        self.assertFalse(result["vetoed"])
+        self.assertNotIn(
+            "license-or-provenance-breach",
+            [item["id"] for item in result["applied_caps"]],
+        )
+
+    def test_in_scope_active_gate_blocks_selected_target(self):
+        payload = base_payload()
+        self.add_active_gate(payload, "license-or-provenance-breach")
+        payload["gates"][0]["affected_targets"] = ["team-shared", "public-marketplace"]
+        result = self.compute(payload)
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertEqual(result["blocking_gates"], result["active_gates"])
+        self.assertTrue(result["vetoed"])
+
+    def test_gate_scope_must_not_be_empty(self):
+        payload = base_payload()
+        self.add_active_gate(payload, "license-or-provenance-breach")
+        payload["gates"][0]["affected_targets"] = []
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.gates[0].affected_targets")
+
+    def test_gate_scope_rejects_unknown_target(self):
+        payload = base_payload()
+        self.add_active_gate(payload, "license-or-provenance-breach")
+        payload["gates"][0]["affected_targets"] = ["private-preview"]
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.gates[0].affected_targets[0]")
+
+    def test_gate_scope_rejects_duplicate_targets(self):
+        payload = base_payload()
+        self.add_active_gate(payload, "license-or-provenance-breach")
+        payload["gates"][0]["affected_targets"] = [
+            "public-marketplace",
+            "public-marketplace",
+        ]
+        with self.assertRaises(score_review.ValidationError) as caught:
+            score_review.validate(payload)
+        self.assertEqual(caught.exception.path, "$.gates[0].affected_targets")
 
     def test_dangerous_trigger_overreach_is_a_veto(self):
         payload = base_payload()
@@ -437,7 +776,11 @@ class ScoreReviewTests(unittest.TestCase):
     def test_required_failed_publish_check_is_not_ready(self):
         payload = base_payload()
         payload["evidence"].append(
-            {"id": "e-failure", "kind": "runtime", "result": "fail", "reproducible": True, "fresh": True}
+            {
+                "id": "e-failure", "kind": "runtime", "result": "fail",
+                "reproducible": True, "fresh": True, "lane": "structural",
+                "assertion_type": "deterministic",
+            }
         )
         payload["publish_checks"] = [
             {
@@ -488,7 +831,11 @@ class ScoreReviewTests(unittest.TestCase):
     def test_verified_dimension_rejects_claim_only_evidence(self):
         payload = base_payload()
         payload["evidence"].append(
-            {"id": "e-claim", "kind": "claim", "result": "pass", "reproducible": True, "fresh": True}
+            {
+                "id": "e-claim", "kind": "claim", "result": "pass",
+                "reproducible": True, "fresh": True, "lane": "structural",
+                "assertion_type": "not-applicable",
+            }
         )
         payload["dimensions"][0]["evidence_ids"] = ["e-claim"]
         with self.assertRaises(score_review.ValidationError):

@@ -1,8 +1,12 @@
 {
   "schema_version": "1",
+  "artifact_status": "definition-only",
+  "recorded_run": null,
   "purpose": "Measure whether RateMySkill is selected for concrete Agent Skill audits without absorbing generic prompt, code, plugin, or installation work.",
   "runs_per_case": 3,
-  "trigger_rate_threshold": 0.5,
+  "minimum_hit_rate": 0.8,
+  "maximum_false_trigger_rate": 0.1,
+  "variance_policy": "Repeat every case equally and withhold a pass when threshold compliance is unstable.",
   "selection_rule": "a concrete Agent Skill artifact or current workspace plus rating, audit, red-team, publication, discovery, execution, safety, or same-rubric re-review intent",
   "cases": [
     {

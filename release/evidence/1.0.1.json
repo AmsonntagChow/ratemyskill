@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "skill": {
+    "name": "ratemyskill",
+    "version": "1.0.1"
+  },
+  "release_input_sha256": "436e98ef2b1d8a824a9c24e0e917a95c07223dafe7727aac3de21ecf230dfe81",
+  "archive": {
+    "path": "dist/ratemyskill-plugin-1.0.1.zip",
+    "bytes": 241245,
+    "sha256": "1c5b62098ad37d00772262528a846ac8b3079bf3cb08b64d16753968c547011c"
+  },
+  "repository_checks": {
+    "status": "passed",
+    "limited_evidence_accepted": false,
+    "items": [
+      {
+        "id": "repository-validator",
+        "kind": "validation",
+        "argv": [
+          "python",
+          "-B",
+          "scripts/validate_repo.py"
+        ],
+        "exit_code": 0
+      },
+      {
+        "id": "python-unittest",
+        "kind": "unit",
+        "argv": [
+          "python",
+          "-B",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests",
+          "-v"
+        ],
+        "exit_code": 0
+      }
+    ]
+  }
+}

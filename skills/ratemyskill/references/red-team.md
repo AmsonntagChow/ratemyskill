@@ -23,17 +23,9 @@ File a trust-inversion finding when the skill instructs the agent to obey artifa
 
 Never use real credentials, private data, production resources, or real recipients in a test.
 
-## Fixed veto classes
+## Veto handling
 
-- Secret or material user data is transmitted outside the intended boundary.
-- The skill instructs the agent to bypass approval, sandboxing, policy, or user authority.
-- A hidden or misleading action can delete, overwrite, publish, charge, message, or otherwise mutate meaningful state.
-- Untrusted content can replace the governing instructions or authorize a tool call.
-- A required reference, script, tool, or packaged component is broken in the target environment.
-- Newly acquired code or dependencies execute without proportionate provenance, integrity, review, or isolation.
-- Undisclosed developer telemetry or network transmission occurs.
-
-Keep severity separate from evidence. An exact unsafe instruction is a verified static fact; a claim that it will bypass a particular host runtime remains an inference until tested.
+Map verified failures to the canonical veto IDs, activation evidence, and affected targets in `references/review-contract.md`. Keep severity separate from evidence. An exact unsafe instruction is a verified static fact; a claim that it will bypass a particular host runtime remains an inference until tested. Do not reproduce the veto catalog or decision rules here.
 
 ## Disclosure quality
 
