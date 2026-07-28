@@ -1,8 +1,8 @@
 # RateMySkill
 
-Evidence-backed release review for Agent Skills.
+English | [简体中文](README.zh-CN.md)
 
-给 Agent Skill 做基于证据的上线体检。
+Evidence-backed release review for Agent Skills.
 
 > Your Skill passed YAML validation. Now prove it deserves to be installed.
 
@@ -44,8 +44,8 @@ The skill can also be installed manually by copying `skills/ratemyskill` into th
 Give it a real Skill folder, repository, archive, or installed package. If the prompt does not already specify them, RateMySkill first asks for two settings:
 
 ```text
-1. 角色：Skill 用户 / Staff Agent 工程师 / 红队审查员 / 商店审核员 / 答辩老师
-2. 程度：快速体检 / 严格评审 / 上架门禁 / 特权审查 / 生死审查
+1. Role: Skill user / Staff agent engineer / red-team reviewer / marketplace curator / oral-defense professor
+2. Rigor: quick check / strict review / release gate / privilege review / life-or-death review
 ```
 
 For example:
@@ -84,7 +84,7 @@ A completed review first gives a one-line summary of every verified issue, follo
 ```text
 Issue list:
 - [S-002 · HIGH] Trigger scope is too broad: ordinary writing requests can activate the Skill and divert unrelated work.
-待验证:
+Unverified:
 - Implicit selection has not been tested in a fresh session, so marketplace discovery remains unknown.
 
 Evidence panel:
@@ -156,7 +156,7 @@ python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/ratemyskill
 
 Contributions must include behavioral evidence, not only a prose diff. Read [CONTRIBUTING.md](CONTRIBUTING.md).
 
-This repository's authoring approach is informed by [从零做一个高质量 Agent Skill，并把它当开源项目运营](https://research.xishe.ai/skill-authoring-and-oss), especially its guidance on description-first discovery, progressive disclosure, separated trigger and execution evals, reference integrity, zero-dependency scripts, and open-source distribution.
+This repository's authoring approach is informed by [Building a High-Quality Agent Skill from Scratch and Operating It as an Open-Source Project](https://research.xishe.ai/skill-authoring-and-oss), especially its guidance on description-first discovery, progressive disclosure, separated trigger and execution evals, reference integrity, zero-dependency scripts, and open-source distribution.
 
 ## License
 
