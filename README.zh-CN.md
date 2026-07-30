@@ -8,6 +8,7 @@
 
 [![MIT 许可证](https://img.shields.io/badge/license-MIT-2f855a.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-compatible-5b5bd6.svg)](https://agentskills.io/)
+[![skills.sh](https://skills.sh/b/AmsonntagChow/ratemyskill)](https://skills.sh/amsonntagchow/ratemyskill/ratemyskill)
 
 RateMySkill 对具体 Agent Skill 的实际行为进行审计，而不只是检查 Markdown。它会检验：正确的请求能否发现它；与不使用该 Skill 完成同一任务相比，使用它能否带来可衡量的结果提升；其脚本和指令是否始终在权限范围内运行；以及最终软件包能否由其他人安装并复现。
 
