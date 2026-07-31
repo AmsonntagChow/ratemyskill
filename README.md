@@ -16,6 +16,12 @@ RateMySkill audits a concrete Agent Skill as behavior, not just Markdown. It che
 
 Choose one method. Do not install duplicate copies in the same client and scope.
 
+The `skills` CLI is the shortest path and works in Codex, Claude Code, Cursor, and every other Agent Skills client:
+
+```bash
+npx skills add AmsonntagChow/ratemyskill --skill ratemyskill
+```
+
 For Codex, add this repository as a plugin marketplace:
 
 ```bash
@@ -28,17 +34,11 @@ For Claude Code:
 
 ```text
 /plugin marketplace add AmsonntagChow/ratemyskill
-/plugin install ratemyskill@amsonntagchow-ratemyskill
-/reload-plugins
 ```
 
-For Cursor, Codex, Claude Code, or another Agent Skills client through the portable `skills` CLI:
+Send only that line: `/plugin` reads everything after it as a single argument, so a multi-line paste arrives as one malformed repository name. Once it is added, open `/plugins`, install **RateMySkill** from the menu, and start a new session.
 
-```bash
-npx skills add AmsonntagChow/ratemyskill --skill ratemyskill
-```
-
-The skill can also be installed manually by copying `skills/ratemyskill` into the skills directory used by the agent.
+The skill can also be installed manually by copying `skills/ratemyskill` into the skills directory used by the agent. No method updates itself: run the install again to move to a newer release.
 
 ## Start an audit
 

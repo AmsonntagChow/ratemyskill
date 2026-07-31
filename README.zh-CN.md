@@ -16,6 +16,12 @@ RateMySkill 对具体 Agent Skill 的实际行为进行审计，而不只是检�
 
 选择一种方式即可。不要在同一客户端的同一作用域内安装重复副本。
 
+`skills` CLI 最短，且在 Codex、Claude Code、Cursor 以及其他所有 Agent Skills 客户端都能用：
+
+```bash
+npx skills add AmsonntagChow/ratemyskill --skill ratemyskill
+```
+
 在 Codex 中，将此仓库添加为插件市场：
 
 ```bash
@@ -28,17 +34,11 @@ codex plugin marketplace add AmsonntagChow/ratemyskill
 
 ```text
 /plugin marketplace add AmsonntagChow/ratemyskill
-/plugin install ratemyskill@amsonntagchow-ratemyskill
-/reload-plugins
 ```
 
-对于 Cursor、Codex、Claude Code 或其他 Agent Skills 客户端，也可以通过可移植的 `skills` CLI 安装：
+只发这一条：`/plugin` 会把它后面的全部内容当作一个参数，多行粘贴会被读成一个畸形仓库名。添加成功后打开 `/plugins`，在菜单里安装 **RateMySkill**，再开一个新会话。
 
-```bash
-npx skills add AmsonntagChow/ratemyskill --skill ratemyskill
-```
-
-也可以手动安装此 Skill：将 `skills/ratemyskill` 复制到智能体所使用的 Skill 目录中。
+也可以手动安装此 Skill：将 `skills/ratemyskill` 复制到智能体所使用的 Skill 目录中。 所有方式都不会自动更新：要升级到新版本，重新执行一次安装命令即可。
 
 ## 开始审计
 
