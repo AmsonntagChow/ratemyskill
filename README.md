@@ -27,9 +27,10 @@ For Codex, add this repository as a plugin marketplace:
 
 ```bash
 codex plugin marketplace add AmsonntagChow/ratemyskill
+codex plugin add ratemyskill@amsonntagchow-ratemyskill
 ```
 
-Then open `/plugins` in Codex CLI or the Plugins Directory in the desktop app, install **RateMySkill**, and start a new session.
+Then start a new session. In the Codex desktop app, install from the Plugins Directory instead of running the second command.
 
 For Claude Code:
 

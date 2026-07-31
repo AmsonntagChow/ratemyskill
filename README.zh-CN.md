@@ -27,9 +27,10 @@ npx skills add AmsonntagChow/ratemyskill --skill ratemyskill
 
 ```bash
 codex plugin marketplace add AmsonntagChow/ratemyskill
+codex plugin add ratemyskill@amsonntagchow-ratemyskill
 ```
 
-然后在 Codex CLI 中打开 `/plugins`，或在桌面应用中打开 Plugins Directory，安装 **RateMySkill**，并开始一个新会话。
+然后启动新会话。Codex 桌面应用里可以用 Plugins Directory 代替第二条命令。
 
 对于 Claude Code：
 
