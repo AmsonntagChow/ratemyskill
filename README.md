@@ -1,6 +1,6 @@
 # RateMySkill
 
-English | [简体中文](README.zh-CN.md) | [skill.ratemy.sh](https://skill.ratemy.sh/)
+English | [简体中文](README.zh-CN.md)
 
 Evidence-backed release review for Agent Skills.
 
@@ -8,6 +8,7 @@ Evidence-backed release review for Agent Skills.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-2f855a.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-compatible-5b5bd6.svg)](https://agentskills.io/)
+[![ratemy.sh](https://img.shields.io/badge/ratemy.sh-skill-C4500F.svg)](https://skill.ratemy.sh/)
 [![skills.sh](https://skills.sh/b/AmsonntagChow/ratemyskill)](https://skills.sh/amsonntagchow/ratemyskill/ratemyskill)
 
 RateMySkill audits a concrete Agent Skill as behavior, not just Markdown. It checks whether the right requests discover it, whether using it measurably improves results over the same task without it, whether its scripts and instructions stay inside their authority, and whether the final package can be installed and reproduced by someone else.
