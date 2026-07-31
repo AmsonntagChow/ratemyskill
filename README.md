@@ -1,6 +1,6 @@
 # RateMySkill
 
-English | [简体中文](README.zh-CN.md)
+English | [简体中文](README.zh-CN.md) | [skill.ratemy.sh](https://skill.ratemy.sh/)
 
 Evidence-backed release review for Agent Skills.
 

@@ -1,6 +1,6 @@
 # RateMySkill
 
-[English](README.md) | 简体中文
+[English](README.md) | 简体中文 | [skill.ratemy.sh](https://skill.ratemy.sh/zh/)
 
 为 Agent Skill 提供以证据为依据的发布评审。
 
